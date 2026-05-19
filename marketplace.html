@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CFC NFT Marketplace | Center for Creators</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<style>
+:root {
+  --gold: #F0B429; --gold-light: #FFD166; --gold-dark: #C88B00;
+  --purple: #7C3AED; --purple-light: #A855F7; --purple-dark: #5B21B6;
+  --green: #10B981; --green-light: #34D399; --green-dark: #059669;
+  --bg: #07070F; --bg2: #0D0D1A; --bg3: #12121F; --bg4: #1A1A2E;
+  --card: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.07);
+  --text: #E5E7EB; --text-muted: #87CEEB; --text-dim: #8B90A0;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 3px; }
+#canvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:0.35; }
+
+/* NAV */
+nav { position:fixed; top:0; left:0; right:0; z-index:1000; display:flex; align-items:center; justify-content:space-between; padding:0 2.5rem; height:70px; background:rgba(7,7,15,0.9); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
+.nav-logo img { height:45px; filter:brightness(1.1); }
+.nav-links { display:flex; gap:1.8rem; list-style:none; }
+.nav-links a { text-decoration:none; color:#E5E7EB; font-size:0.82rem; font-weight:500; letter-spacing:0.03em; transition:color 0.25s; text-transform:uppercase; }
+.nav-links a:hover, .nav-links a.active { color:var(--gold); }
+.nav-ctas { display:flex; gap:0.75rem; align-items:center; }
+.btn-ghost { padding:0.45rem 1.1rem; border-radius:8px; border:1px solid var(--border); color:#E5E7EB; background:transparent; cursor:pointer; font-size:0.82rem; font-weight:500; transition:all 0.25s; text-decoration:none; font-family:inherit; }
+.btn-ghost:hover { border-color:var(--gold); color:var(--gold); }
+.btn-gold { padding:0.5rem 1.3rem; border-radius:8px; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); color:#000; font-weight:700; font-size:0.82rem; cursor:pointer; border:none; transition:all 0.25s; text-decoration:none; font-family:inherit; letter-spacing:0.02em; }
+.btn-gold:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(240,180,41,0.35); }
+.wallet-balances { display:flex; gap:0.5rem; align-items:center; margin-right:0.25rem; }
+.bal-pill { font-size:0.78rem; font-weight:700; padding:0.28rem 0.7rem; border-radius:20px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,215,0,0.25); color:var(--gold); letter-spacing:0.05em; white-space:nowrap; }
+.bal-pill.cfc-pill { border-color:rgba(16,185,129,0.3); color:var(--green); }
+
+/* TICKER */
+.ticker-wrap { position:fixed; top:70px; left:0; right:0; z-index:999; background:linear-gradient(90deg,var(--bg2),rgba(240,180,41,0.03),var(--bg2)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:0.7rem 0; overflow:hidden; }
+.ticker-inner { display:flex; gap:3rem; white-space:nowrap; animation:ticker 28s linear infinite; }
+.ticker-inner:hover { animation-play-state:paused; }
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ticker-item { display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; font-weight:500; color:#E5E7EB; }
+.ticker-item .t-label { color:var(--gold); font-weight:700; }
+.ticker-item .t-green { color:var(--green); }
+.ticker-item .t-purple { color:var(--purple-light); }
+.ticker-sep { color:var(--text-dim); }
+
+/* LAYOUT */
+.page-content { padding-top: 120px; position:relative; z-index:1; }
+.container { max-width:1200px; margin:0 auto; padding:0 2.5rem; }
+.reveal { opacity:0; transform:translateY(30px); transition:opacity 0.7s ease,transform 0.7s ease; }
+.reveal.visible { opacity:1; transform:translateY(0); }
+.section-tag { display:inline-flex; align-items:center; gap:0.4rem; font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:1rem; }
+.section-tag::before { content:none; }
+.tag-gold { color:var(--gold); }
+.section-title { font-family:'Space Grotesk',sans-serif; font-size:clamp(1.8rem,3vw,2.6rem); font-weight:700; line-height:1.15; margin-bottom:1rem; }
+.section-sub { color:#87CEEB; font-size:1.05rem; line-height:1.65; max-width:640px; margin:0 auto 1.5rem; text-align:center; }
+
+/* HERO */
+#market-hero { padding:3rem 0 5rem; text-align:center; position:relative; overflow:hidden; }
+.hero-glow-gold { position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(240,180,41,0.1) 0%,transparent 70%); top:-150px; left:50%; transform:translateX(-50%); pointer-events:none; }
+.hero-glow-purple { position:absolute; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(124,58,237,0.08) 0%,transparent 70%); bottom:-100px; right:10%; pointer-events:none; }
+.market-hero-tag { display:inline-flex; align-items:center; gap:0.5rem; padding:0.35rem 1rem; border-radius:100px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.07); font-size:0.75rem; font-weight:600; color:var(--green); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:1.5rem; }
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.market-hero-title { font-family:'Space Grotesk',sans-serif; font-size:clamp(2.2rem,5vw,4rem); font-weight:800; margin-bottom:1.2rem; line-height:1.1; color:#EEF4FF; -webkit-text-stroke:1px rgba(135,206,235,0.6); text-shadow:0 0 20px rgba(135,206,235,0.6),0 0 60px rgba(135,206,235,0.3),0 0 120px rgba(96,165,250,0.2); animation:blue-pulse 4s ease-in-out infinite; }
+@keyframes blue-pulse { 0%,100%{color:#EEF4FF;-webkit-text-stroke:1px rgba(135,206,235,0.6);text-shadow:0 0 20px rgba(135,206,235,0.6),0 0 60px rgba(135,206,235,0.3),0 0 120px rgba(96,165,250,0.2)} 50%{color:#F5F9FF;-webkit-text-stroke:1.5px rgba(135,206,235,0.9);text-shadow:0 0 30px rgba(135,206,235,0.9),0 0 80px rgba(135,206,235,0.5),0 0 160px rgba(96,165,250,0.3)} }
+.market-hero-sub { font-size:1.05rem; color:var(--text-muted); max-width:600px; margin:0 auto 2rem; line-height:1.7; }
+.market-hero-stats { display:flex; gap:3rem; justify-content:center; flex-wrap:wrap; margin-top:2rem; }
+.mh-stat-num { font-family:'Space Grotesk',sans-serif; font-size:1.05rem; font-weight:400; color:var(--gold); }
+.mh-stat-label { font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.15rem; }
+
+/* WALLET BANNER */
+#wallet-banner { padding:1.2rem 2.5rem; background:linear-gradient(90deg,rgba(124,58,237,0.06),rgba(240,180,41,0.06)); border-top:1px solid rgba(124,58,237,0.15); border-bottom:1px solid rgba(240,180,41,0.1); display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap; text-align:center; }
+#wallet-banner.hidden { display:none; }
+.wallet-banner-text { color:var(--text-muted); font-size:0.92rem; }
+.wallet-addr-display { display:none; align-items:center; gap:0.75rem; font-size:0.85rem; background:rgba(240,180,41,0.06); border:1px solid rgba(240,180,41,0.2); padding:0.4rem 1rem; border-radius:8px; color:var(--gold); }
+
+/* FAUCET */
+#faucet-section { padding:1.4rem 2.5rem; background:linear-gradient(90deg,rgba(16,185,129,0.08),rgba(240,180,41,0.08),rgba(124,58,237,0.08)); border-top:1px solid rgba(16,185,129,0.15); border-bottom:1px solid rgba(240,180,41,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; text-align:center; }
+.faucet-text { font-size:1.45rem; font-weight:600; color:var(--text); }
+.faucet-text span { color:var(--gold); }
+.btn-faucet { padding:0.5rem 1.4rem; border-radius:8px; background:linear-gradient(135deg,var(--green),var(--green-dark)); color:#fff; font-weight:700; font-size:0.82rem; cursor:pointer; border:none; transition:all 0.25s; font-family:inherit; }
+.btn-faucet:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(16,185,129,0.3); }
+#faucet-msg { font-size:0.82rem; min-height:1.2em; }
+
+/* MARKETPLACE */
+#listings { padding:60px 0 100px; }
+.listings-header { text-align:center; margin-bottom:3rem; }
+.view-tabs { display:inline-flex; gap:0; margin:2rem 0 0; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:12px; overflow:hidden; }
+.view-tab { flex:1; padding:0.75rem 1rem; background:transparent; border:none; color:#8B90A0; font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:inherit; text-align:center; }
+.view-tab:hover { color:#E5E7EB; background:rgba(255,255,255,0.05); }
+.view-tab.active { background:rgba(240,180,41,0.12); color:var(--gold); border-bottom:2px solid var(--gold); }
+
+.filter-tabs { display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap; margin-top:1rem; }
+.filter-tab { padding:0.45rem 1.2rem; border-radius:100px; border:2px solid transparent; background:rgba(255,255,255,0.06); color:#C0C8D8; font-size:0.92rem; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+.filter-tab:hover { color:#fff; background:rgba(255,255,255,0.1); }
+.filter-tab[data-cat="all"] { border-color:rgba(255,255,255,0.2); }
+.filter-tab[data-cat="all"].active { background:#E5E7EB; color:#0C0C1D; border-color:#E5E7EB; }
+.filter-tab[data-cat="book"] { border-color:#F0B429; color:#F0B429; }
+.filter-tab[data-cat="book"].active { background:#F0B429; color:#000; border-color:#F0B429; }
+.filter-tab[data-cat="article"] { border-color:#87CEEB; color:#87CEEB; }
+.filter-tab[data-cat="article"].active { background:#87CEEB; color:#000; border-color:#87CEEB; }
+.filter-tab[data-cat="workshop"] { border-color:#10B981; color:#10B981; }
+.filter-tab[data-cat="workshop"].active { background:#10B981; color:#fff; border-color:#10B981; }
+.filter-tab[data-cat="service"] { border-color:#A78BFA; color:#A78BFA; }
+.filter-tab[data-cat="service"].active { background:#7C3AED; color:#fff; border-color:#7C3AED; }
+.filter-tab[data-cat="art"] { border-color:#F472B6; color:#F472B6; }
+.filter-tab[data-cat="art"].active { background:#F43F5E; color:#fff; border-color:#F43F5E; }
+.nft-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:1.5rem; margin-top:2.5rem; }
+.nft-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; transition:all 0.3s; position:relative; }
+.nft-card:hover { transform:translateY(-6px); border-color:rgba(240,180,41,0.3); box-shadow:0 20px 60px rgba(240,180,41,0.08),0 0 0 1px rgba(240,180,41,0.1); }
+.nft-card:hover .nft-img { transform:scale(1.05); }
+.nft-img-wrap { height:325px; overflow:hidden; background:var(--bg3); position:relative; flex-shrink:0; }
+.nft-img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s; }
+.nft-img-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:3rem; background:linear-gradient(135deg,var(--bg3),var(--bg4)); }
+.nft-badge { position:absolute; top:10px; left:10px; padding:0.28rem 0.7rem; border-radius:100px; font-size:0.7rem; font-weight:800; letter-spacing:0.07em; text-transform:uppercase; background:rgba(0,0,0,0.62); color:#fff; border:1.5px solid rgba(255,255,255,0.22); backdrop-filter:blur(10px); box-shadow:0 2px 10px rgba(0,0,0,0.5); }
+.badge-book { border-color:#F0B429; color:#F0B429; }
+.badge-art { border-color:#F472B6; color:#F472B6; }
+.badge-workshop { border-color:#10B981; color:#10B981; }
+.badge-service { border-color:#A78BFA; color:#A78BFA; }
+.badge-article { border-color:#87CEEB; color:#87CEEB; }
+.nft-body { padding:1.2rem; }
+.nft-title { font-family:'Space Grotesk',sans-serif; font-size:1rem; font-weight:700; margin-bottom:0.4rem; line-height:1.4; min-height:2.8em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.nft-desc { font-size:0.78rem; color:var(--text-muted); line-height:1.5; margin-bottom:0.8rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.nft-qty { font-size:0.72rem; color:var(--text-dim); margin-bottom:0.8rem; }
+.nft-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; }
+.nft-prices { display:flex; flex-direction:column; gap:0.15rem; }
+.nft-price-xrp { font-size:0.85rem; font-weight:700; color:var(--gold); }
+.nft-price-rlusd { font-size:0.75rem; color:var(--text-muted); }
+.nft-buy-btns { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.btn-buy-xrp { padding:0.4rem 0.85rem; border-radius:8px; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); color:#000; font-size:0.72rem; font-weight:700; cursor:pointer; border:none; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
+.btn-buy-xrp:hover { transform:scale(1.05); }
+.btn-buy-rlusd { padding:0.4rem 0.85rem; border-radius:8px; background:linear-gradient(135deg,var(--green),var(--green-dark)); color:#fff; font-size:0.72rem; font-weight:700; cursor:pointer; border:none; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
+.btn-buy-rlusd:hover { transform:scale(1.05); }
+.btn-view { padding:0.4rem 0.85rem; border-radius:8px; border:1px solid var(--border); color:var(--text-muted); font-size:0.72rem; font-weight:600; cursor:pointer; background:transparent; transition:all 0.2s; font-family:inherit; }
+.btn-view:hover { border-color:var(--gold); color:var(--gold); }
+.nft-loading { text-align:center; padding:4rem; color:var(--text-dim); font-size:1rem; }
+.nft-loading-spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1rem; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.sold-out-badge { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); color:#fff; padding:0.5rem 1rem; border-radius:8px; font-weight:700; font-size:0.85rem; pointer-events:none; }
+
+/* MY ORDERS */
+#my-orders { padding:80px 0; background:linear-gradient(180deg,var(--bg2),var(--bg)); display:none; }
+.orders-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.5rem; margin-top:2rem; }
+.order-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; transition:all 0.3s; }
+.order-card:hover { border-color:rgba(16,185,129,0.3); }
+.order-name { font-family:'Space Grotesk',sans-serif; font-size:1rem; font-weight:700; margin-bottom:0.4rem; }
+.order-meta { font-size:0.78rem; color:var(--text-muted); margin-bottom:0.8rem; }
+.order-badge { display:inline-block; padding:0.25rem 0.7rem; border-radius:100px; font-size:0.7rem; font-weight:700; }
+.badge-completed { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
+.badge-pending { background:rgba(240,180,41,0.15); color:var(--gold); border:1px solid rgba(240,180,41,0.3); }
+
+/* MODALS */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:2000; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-box { background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:2.5rem; max-width:480px; width:90%; position:relative; transform:translateY(20px); transition:transform 0.3s; box-shadow:0 40px 80px rgba(0,0,0,0.6); }
+.modal-overlay.open .modal-box { transform:translateY(0); }
+.modal-close { position:absolute; top:1rem; right:1rem; background:transparent; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer; transition:color 0.2s; }
+.modal-close:hover { color:var(--text); }
+.modal-title { font-family:'Space Grotesk',sans-serif; font-size:1.3rem; font-weight:700; margin-bottom:0.5rem; }
+.modal-sub { font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem; line-height:1.5; }
+.form-group { margin-bottom:1rem; }
+.form-label { font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.35rem; display:block; }
+.form-input { width:100%; padding:0.75rem 1rem; border-radius:8px; background:var(--bg4); border:1px solid var(--border); color:var(--text); font-size:0.9rem; font-family:inherit; outline:none; transition:border-color 0.2s; }
+.form-input:focus { border-color:var(--gold); }
+.btn-full-gold { width:100%; padding:0.85rem; border-radius:10px; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); color:#000; font-weight:700; font-size:0.95rem; cursor:pointer; border:none; transition:all 0.25s; font-family:inherit; margin-top:0.5rem; }
+.btn-full-gold:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(240,180,41,0.3); }
+.btn-full-outline { width:100%; padding:0.85rem; border-radius:10px; border:1px solid var(--border); color:var(--text-muted); font-weight:600; font-size:0.95rem; cursor:pointer; background:transparent; transition:all 0.25s; font-family:inherit; margin-top:0.5rem; }
+.btn-full-outline:hover { border-color:var(--gold); color:var(--gold); }
+.xaman-section { text-align:center; padding:1rem 0; }
+#qr-canvas { margin:1rem auto; display:block; }
+.xaman-link-btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.75rem 1.5rem; border-radius:10px; background:linear-gradient(135deg,#1366E6,#0D47A1); color:#fff; font-weight:700; font-size:0.9rem; text-decoration:none; border:none; cursor:pointer; font-family:inherit; margin-top:0.75rem; transition:all 0.2s; }
+.xaman-link-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(19,102,230,0.4); }
+.spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; margin:1rem auto; }
+.status-text { font-size:0.85rem; color:var(--text-muted); text-align:center; margin-top:0.5rem; }
+.success-icon { font-size:3rem; text-align:center; margin-bottom:1rem; }
+.divider { border:none; border-top:1px solid var(--border); margin:1.5rem 0; }
+.buy-nft-img { width:100%; height:140px; object-fit:cover; border-radius:10px; margin-bottom:1rem; background:var(--bg4); }
+.buy-nft-name { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.1rem; margin-bottom:0.3rem; }
+.buy-nft-meta { font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem; }
+.price-row { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:var(--bg4); border-radius:8px; margin-bottom:1rem; }
+.price-label { font-size:0.82rem; color:var(--text-muted); }
+.price-val { font-weight:700; color:var(--gold); font-size:1rem; }
+.currency-toggle { display:flex; gap:0.5rem; margin-bottom:1rem; }
+.cur-btn { flex:1; padding:0.5rem; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+.cur-btn.xrp { border:1px solid rgba(240,180,41,0.3); background:rgba(240,180,41,0.06); color:var(--gold); }
+.cur-btn.xrp.active { background:linear-gradient(135deg,var(--gold),var(--gold-dark)); color:#000; border-color:transparent; }
+.cur-btn.rlusd { border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.06); color:var(--green); }
+.cur-btn.rlusd.active { background:linear-gradient(135deg,var(--green),var(--green-dark)); color:#fff; border-color:transparent; }
+.alert { padding:0.75rem 1rem; border-radius:8px; font-size:0.85rem; margin-bottom:1rem; }
+.alert-warning { background:rgba(240,180,41,0.1); border:1px solid rgba(240,180,41,0.25); color:var(--gold); }
+.alert-success { background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); color:var(--green); }
+.alert-error { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#F87171; }
+
+/* EMPTY STATE */
+.empty-state { text-align:center; padding:5rem 2rem; }
+.empty-icon { font-size:4rem; margin-bottom:1rem; opacity:0.5; }
+.empty-title { font-family:'Space Grotesk',sans-serif; font-size:1.3rem; font-weight:700; margin-bottom:0.5rem; color:var(--text-muted); }
+.empty-sub { font-size:0.9rem; color:var(--text-dim); }
+
+/* FOOTER */
+footer { background:var(--bg2); border-top:1px solid var(--border); padding:60px 2.5rem 30px; z-index:1; position:relative; }
+.footer-inner { max-width:1200px; margin:0 auto; }
+.footer-top { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:3rem; margin-bottom:3rem; }
+.footer-brand p { font-size:0.82rem; color:var(--text-muted); line-height:1.6; max-width:280px; margin-top:1rem; }
+.footer-brand img { height:40px; }
+.footer-social { display:flex; gap:0.75rem; margin-top:1.2rem; }
+.social-btn { width:36px; height:36px; border-radius:8px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.85rem; color:var(--text-muted); cursor:pointer; transition:all 0.2s; text-decoration:none; }
+.social-btn:hover { border-color:var(--gold); color:var(--gold); }
+.footer-col h5 { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); margin-bottom:1rem; }
+.footer-col ul { list-style:none; display:flex; flex-direction:column; gap:0.6rem; }
+.footer-col ul a { text-decoration:none; color:var(--text-dim); font-size:0.82rem; transition:color 0.2s; }
+.footer-col ul a:hover { color:var(--gold); }
+.footer-bottom { border-top:1px solid var(--border); padding-top:1.5rem; display:flex; align-items:center; justify-content:space-between; font-size:0.75rem; color:var(--text-dim); }
+
+@media(max-width:900px){
+  nav {
+    padding:0 1.5rem;
+    flex-wrap:wrap;
+    height:auto;
+    gap:1rem;
+    padding-top:1rem;
+    padding-bottom:1rem;
+  }
+
+  .nav-links {
+    display:flex !important;
+    flex-wrap:wrap;
+    justify-content:center;
+    width:100%;
+    gap:0.8rem;
+  }
+
+  .container { padding:0 1.5rem; }
+
+  .footer-top { grid-template-columns:1fr 1fr; }
+
+  .market-hero-stats { gap:1.5rem; }
+}
+@media(max-width:600px){
+  .footer-top { grid-template-columns:1fr; }
+  .nft-grid { grid-template-columns:1fr; }
+  .modal-box { padding:1.5rem; }
+}
+ @media(max-width:768px){
+
+  nav{
+    padding:0 1rem;
+    height:auto;
+    flex-wrap:wrap;
+    gap:1rem;
+    padding-top:1rem;
+    padding-bottom:1rem;
+  }
+
+  .nav-ctas{
+    width:100%;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  #wallet-banner{
+    padding:1rem;
+    flex-direction:column;
+  }
+
+  .container{
+    padding:0 1rem;
+  }
+
+  .market-hero-stats{
+    gap:1rem;
+  }
+
+  .nft-grid,
+  .orders-grid{
+    grid-template-columns:1fr;
+  }
+
+  .nft-footer,
+  .nft-buy-btns{
+    flex-direction:column;
+    width:100%;
+  }
+
+  .btn-buy-xrp,
+  .btn-buy-rlusd,
+  .btn-view{
+    width:100%;
+  }
+
+  .footer-bottom{
+    flex-direction:column;
+    gap:1rem;
+    text-align:center;
+  }
+
+  body{
+    overflow-x:hidden;
+  }
+} 
+</style>
+  <script src="https://xumm.app/assets/cdn/xumm.min.js"></script>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <a href="index.html"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/4QC8RXhpZgAASUkqAAgAAAAGABIBAwABAAAAAQAAABoBBQABAAAAVgAAABsBBQABAAAAXgAAACgBAwABAAAAAgAAABMCAwABAAAAAQAAAGmHBAABAAAAZgAAAAAAAABgAAAAAQAAAGAAAAABAAAABgAAkAcABAAAADAyMTABkQcABAAAAAECAwAAoAcABAAAADAxMDABoAMAAQAAAP//AAACoAMAAQAAAJABAAADoAMAAQAAAJABAAAAAAAA/+EOx2h0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8APD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI2LTAzLTAyPC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkRhdGE+eyZxdW90O2RvYyZxdW90OzomcXVvdDtEQUdfS09xVFUzYyZxdW90OywmcXVvdDt1c2VyJnF1b3Q7OiZxdW90O1VBR0VCQ05KX0dnJnF1b3Q7LCZxdW90O2JyYW5kJnF1b3Q7OiZxdW90O0JBR0VCSmZsOXBRJnF1b3Q7fTwvQXR0cmliOkRhdGE+CiAgICAgPEF0dHJpYjpFeHRJZD42OTcyMTMwOC1lMWQ1LTRjNjItOWM1ZC02NWI3MDRkYTM0YzA8L0F0dHJpYjpFeHRJZD4KICAgICA8QXR0cmliOkZiSWQ+NTI1MjY1OTE0MTc5NTgwPC9BdHRyaWI6RmJJZD4KICAgICA8QXR0cmliOlRvdWNoVHlwZT4yPC9BdHRyaWI6VG91Y2hUeXBlPgogICAgPC9yZGY6bGk+CiAgIDwvcmRmOlNlcT4KICA8L0F0dHJpYjpBZHM+CiA8L3JkZjpEZXNjcmlwdGlvbj4KCiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0nJwogIHhtbG5zOmRjPSdodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyc+CiAgPGRjOnRpdGxlPgogICA8cmRmOkFsdD4KICAgIDxyZGY6bGkgeG1sOmxhbmc9J3gtZGVmYXVsdCc+TkZUIDEgLSAxMzwvcmRmOmxpPgogICA8L3JkZjpBbHQ+CiAgPC9kYzp0aXRsZT4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PScnCiAgeG1sbnM6cGRmPSdodHRwOi8vbnMuYWRvYmUuY29tL3BkZi8xLjMvJz4KICA8cGRmOkF1dGhvcj5DaHJpc3RpZSBSdXNzPC9wZGY6QXV0aG9yPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczp4bXA9J2h0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8nPgogIDx4bXA6Q3JlYXRvclRvb2w+Q2FudmEgKFJlbmRlcmVyKSBkb2M9REFHX0tPcVRVM2MgdXNlcj1VQUdFQkNOSl9HZyBicmFuZD1CQUdFQkpmbDlwUTwveG1wOkNyZWF0b3JUb29sPgogPC9yZGY6RGVzY3JpcHRpb24+CjwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCjw/eHBhY2tldCBlbmQ9J3cnPz7/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGQAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5yooorvOIKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACipIIZJ5FjhQu57Cuj0/wAPxoA9629v7inAH4962o4edZ+6jCviadBe+zm4YZJm2wxs7eijNaUOhXsnLKkY/wBtv8K62KOOFAkSKijsoxT69GGXQXxu55dTNJv4FY5lfDUv8dzGPopNOPhpscXS/ih/xrpKK2+o0e35nP8A2hX/AJvwRy0nhy5UfJLC/wCY/pVGfSb2EEtAzAd0+b+VdvRUSy+k9tDSGZ1VvZnnZBBIIII7GkrofFwXzLZgBuIbJ9elc9XlVqfspuHY9qhV9tTU7WuFFFFZGoUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVa0+ylvpxHEMAcsx6KKitYHuZ0hiGWY4+nvXb2FpHZW6xRD3Zu7H1rrwuGdaV3sjixmLVCNl8TEsLKGyi2QryfvMerVaoo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" alt="Center for Creators" /></a>
+  </div>
+<ul class="nav-links">
+  <li><a href="index.html">Home</a></li>
+  <li><a href="marketplace.html">Marketplace</a></li>
+  <li><a href="nft-creator.html">Create</a></li>
+</ul>
+  <div class="nav-ctas">
+    <a href="nft-creator.html" class="btn-gold">Create NFT</a>
+  </div>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <span class="ticker-item"><span class="t-label">CFC</span> Circular Knowledge Ecosystem <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-green">&#9679; LIVE</span> NFT Marketplace on XRPL <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">NEW</span> Claim 25 CFC Daily via Faucet <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-purple">&#9733;</span> 2&times; Amazon #1 Bestselling Author <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">WEF</span> World Economic Forum Member <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-green">APP</span> CFC Rewards DApp Available Now <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">XAMAN</span> Wallet Integration Live <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">CFC</span> Circular Knowledge Ecosystem <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-green">&#9679; LIVE</span> NFT Marketplace on XRPL <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">NEW</span> Claim 25 CFC Daily via Faucet <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-purple">&#9733;</span> 2&times; Amazon #1 Bestselling Author <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">WEF</span> World Economic Forum Member <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-green">APP</span> CFC Rewards DApp Available Now <span class="ticker-sep">&bull;</span></span>
+    <span class="ticker-item"><span class="t-label">XAMAN</span> Wallet Integration Live <span class="ticker-sep">&bull;</span></span>
+  </div>
+</div>
+
+<!-- PAGE CONTENT -->
+<div class="page-content">
+
+<!-- HERO -->
+<section id="market-hero">
+  <div class="hero-glow-gold"></div>
+  <div class="hero-glow-purple"></div>
+  <div class="container">
+    <div class="market-hero-tag reveal"><span class="live-dot"></span> Live on XRPL Blockchain</div>
+    <h1 class="market-hero-title reveal">CFC Learn and Earn Experience</h1>
+    <p class="market-hero-sub reveal">Articles, Books, Workshops, Services and Art. Each NFT unlocks exclusive content with a personalized AI Agent tailored to your experience.</p>
+    <div class="market-hero-stats reveal">
+      <div><div class="mh-stat-num" id="stat-nfts">--</div><div class="mh-stat-label">NFTs Listed</div></div>
+      <div><div class="mh-stat-num">Top 0.4%</div><div class="mh-stat-label">XRPL Ranking</div></div>
+      <div><div class="mh-stat-num">330+</div><div class="mh-stat-label">NFTs Minted</div></div>
+      <div><div class="mh-stat-num">Est. 2021</div><div class="mh-stat-label">Founded</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- WALLET BANNER -->
+<div id="wallet-banner">
+  <!-- Disconnected state -->
+  <div id="banner-disconnected" style="display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;">
+    <button onclick="xamanConnect()" style="background:linear-gradient(135deg,#B8860B,#FFD700);color:#0C0C1D;font-weight:700;font-size:1rem;padding:0.65rem 2rem;border:none;border-radius:10px;cursor:pointer;font-family:inherit;box-shadow:0 0 18px rgba(255,215,0,0.45);transition:all 0.2s;">&#128279; Connect Wallet</button>
+  </div>
+  <!-- Connected state -->
+  <div id="banner-connected" style="display:none;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;">
+    <span id="wallet-addr-text" style="color:var(--gold);font-size:0.88rem;"></span>
+    <span class="bal-pill xrp-pill">XRP <span id="xrp-bal">--</span></span>
+    <span class="bal-pill cfc-pill">CFC <span id="cfc-bal">--</span></span>
+    <button onclick="disconnectWallet()" style="background:transparent;border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:8px;padding:0.3rem 0.9rem;cursor:pointer;font-size:0.8rem;font-family:inherit;">Disconnect</button>
+  </div>
+  <div class="wallet-addr-display" id="wallet-addr-display" style="display:none;">
+  </div>
+</div>
+
+<!-- FAUCET SECTION -->
+<div id="faucet-section">
+  <p class="faucet-text">&#127834; <span>Daily CFC Faucet is Live</span>. Claim your 25 free CFC tokens every day.</p>
+  <button class="btn-faucet" onclick="claimFaucet()">Claim Now &rarr;</button>
+  <div id="faucet-msg"></div>
+</div>
+
+<!-- VIEW TABS -->
+<div class="container" style="padding-top:2rem;">
+  <div class="view-tabs">
+    <button class="view-tab active" onclick="switchView('listings')">Marketplace</button>
+    <button class="view-tab" onclick="switchView('my-orders')">My Purchases</button>
+    <button class="view-tab" onclick="switchView('redeem')">Redeem</button>
+  </div>
+</div>
+
+<!-- NFT LISTINGS -->
+<section id="listings">
+  <div class="container">
+    <div class="listings-header reveal">
+      <div class="section-tag tag-gold">NFT Marketplace</div>
+      <h2 class="section-title">Live Listings</h2>
+      <p class="section-sub">Browse and purchase knowledge NFTs. Each one unlocks exclusive content with an embedded AI Agent trained on that content.</p>
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-cat="all">All</button>
+        <button class="filter-tab" data-cat="book">Books</button>
+        <button class="filter-tab" data-cat="article">Articles</button>
+        <button class="filter-tab" data-cat="workshop">Workshops</button>
+        <button class="filter-tab" data-cat="service">Services</button>
+        <button class="filter-tab" data-cat="art">Art</button>
+      </div>
+    </div>
+    <div id="nft-grid" class="nft-grid">
+      <div class="nft-loading"><div class="nft-loading-spinner"></div><div>Loading marketplace...</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- MY ORDERS -->
+<section id="my-orders" style="display:none;">
+  <div class="container">
+    <div class="section-tag tag-gold">My Library</div>
+    <h2 class="section-title">Your NFT Library</h2>
+    <p class="section-sub">NFTs you have purchased. Each one unlocks exclusive content and AI Agent interaction.</p>
+   <div id="orders-grid" class="orders-grid"></div>
+     </div>
+</section>
+
+
+<!-- REDEEM SECTION -->
+<section id="redeem-view" style="display:none;">
+  <div class="container" style="text-align:center;padding:4rem 1rem;">
+    
+    <h2 class="section-title">Coming Soon!</h2>
+    <div id="redeem-list" style="max-width:600px;margin:0 auto;">
+    </div>
+  </div>
+</section>
+
+</div><!-- end page-content -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="https://img1.wsimg.com/isteam/ip/a3127942-c60a-42db-a4ae-7d7824f45cc4/blob-35101e4.png" alt="Center for Creators" onerror="this.style.display='none'" />
+        <p>Living a Conscious and Deliberate Life. Creating Balanced, Abundant and Fulfilled Lives through blockchain-powered knowledge and community.</p>
+        <div class="footer-social">
+          <a href="https://www.facebook.com/Center4Creators/" class="social-btn">f</a>
+          <a href="https://www.linkedin.com/company/42872280/" class="social-btn">in</a>
+          <a href="https://www.x.com/center4creators" class="social-btn">&#120143;</a>
+          <a href="https://www.youtube.com/@centerforcreators3526" class="social-btn">&#9654;</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h5>Platform</h5>
+        <ul>
+          <li><a href="marketplace.html">NFT Marketplace</a></li>
+          <li><a href="nft-creator.html">NFT Creator</a></li>
+          <li><a href="https://centerforcreators.com/cfc-token">CFC Token</a></li>
+          <li><a href="https://cfcrewards.com/">CFC Rewards App</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="https://centerforcreators.com/our-vision">Our Vision</a></li>
+          <li><a href="https://centerforcreators.com/services">Services</a></li>
+          <li><a href="https://christieruss.com/">Christie Russ</a></li>
+          <li><a href="https://centerforcreators.com/contact-us">Contact Us</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Learn</h5>
+        <ul>
+          <li><a href="https://centerforcreators.com/blockchain-for-beginners">Blockchain 101</a></li>
+          <li><a href="https://cfcrewards.com/">CFC Rewards App</a></li>
+          <li><a href="http://gem.godaddy.com/signups/0c9efcf7c5a3491f9f9866f50684c91f/join">Subscribe</a></li>
+          <li><a href="index.html">Home</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Center for Creators. All Rights Reserved.</span>
+      <span style="color:var(--gold);">Built on XRPL &middot; Powered by CFC Token</span>
+    </div>
+  </div>
+</footer>
+
+
+
+<!-- BUY MODAL -->
+<div class="modal-overlay" id="buy-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('buy-modal')">&times;</button>
+    <div id="buy-modal-content">
+      <!-- Dynamically populated -->
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-box" style="text-align:center;">
+    <div class="success-icon">&#127881;</div>
+    <div class="modal-title">Purchase Initiated!</div>
+    <p class="modal-sub">Your XAMAN signing request has been sent. Complete the signature in your XAMAN app to finalize the purchase.</p>
+    <button class="btn-full-gold" onclick="closeModal('success-modal');loadOrders();">Got it</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const MARKET_API = 'https://cfc-nft-shared-mint-backend.onrender.com';
+const FAUCET_API = 'https://cfc-faucet.onrender.com';
+const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
+const CFC_ISSUER = 'rsxUkmjnAn8PRDz8RYrPusb9mTDYn5NqG8';
+
+// ── PARTICLE CANVAS ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [], mouse = {x:null,y:null};
+function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+window.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+const COLORS = ['rgba(240,180,41,','rgba(124,58,237,','rgba(16,185,129,'];
+for(let i=0;i<90;i++){
+  const c = COLORS[Math.floor(Math.random()*COLORS.length)];
+  particles.push({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,vx:(Math.random()-0.5)*0.35,vy:(Math.random()-0.5)*0.35,r:Math.random()*1.8+0.5,color:c,alpha:Math.random()*0.6+0.2});
+}
+function drawParticles(){
+  ctx.clearRect(0,0,W,H);
+  particles.forEach((p,i)=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>W) p.vx*=-1;
+    if(p.y<0||p.y>H) p.vy*=-1;
+    if(mouse.x){ const dx=p.x-mouse.x,dy=p.y-mouse.y,dist=Math.sqrt(dx*dx+dy*dy); if(dist<100){p.x+=dx/dist*1.5;p.y+=dy/dist*1.5;} }
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.color+p.alpha+')'; ctx.fill();
+    for(let j=i+1;j<particles.length;j++){
+      const q=particles[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle=p.color+(1-d/120)*0.12+')';ctx.lineWidth=0.5;ctx.stroke();}
+    }
+  });
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// ── SCROLL REVEAL ──
+const revealEls = document.querySelectorAll('.reveal');
+const obs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); } });
+},{threshold:0.1});
+revealEls.forEach(el=>obs.observe(el));
+
+// ── WALLET ──
+let connectedWallet = null;
+
+function loadWallet(){
+  const saved =
+  localStorage.getItem('cfcWallet') ||
+  localStorage.getItem('xrpl_account');
+  if(saved && saved.startsWith('r') && saved.length >= 25){
+    connectedWallet = saved;
+    updateWalletUI();
+    fetchBalances(saved);
+    loadOrders();
+  }
+}
+
+// XAMAN wallet connect via SDK
+let xummInstance = null;
+function getXumm(){
+  if(!xummInstance) xummInstance = new Xumm('eebd4c17-c3ef-435b-b891-89afb99e259e');
+  return xummInstance;
+}
+
+async function xamanConnect(){
+  try {
+    const xumm = getXumm();
+    // Show a connecting indicator
+    const btn = document.querySelector('#banner-disconnected button');
+    if(btn){ btn.textContent = 'Opening Xaman...'; btn.disabled = true; }
+const state = await xumm.authorize();
+
+if(state?.me?.account){
+  setConnected(state.me.account);
+} else {
+  if(btn){
+    btn.textContent = 'Connect Wallet';
+    btn.disabled = false;
+  }
+}
+  } catch(e) {
+    console.error('Xaman connect error:', e);
+    const btn = document.querySelector('#banner-disconnected button');
+    if(btn){ btn.textContent = 'Connect Wallet'; btn.disabled = false; }
+  }
+}
+
+// Keep openWalletModal as alias for backwards compat
+function openWalletModal(){ xamanConnect(); }
+
+function connectWallet(){
+  // legacy — not used
+}
+async function disconnectWallet(){
+
+  try{
+    if(window.xumm && typeof window.xumm.logout === 'function'){
+      await window.xumm.logout();
+    }
+  }catch(e){}
+
+  connectedWallet = null;
+
+  // Clear ALL wallet persistence
+  localStorage.removeItem('cfcWallet');
+  localStorage.removeItem('xrpl_account');
+  localStorage.removeItem('xummAccount');
+  localStorage.removeItem('connectedAccount');
+
+  sessionStorage.removeItem('connectedAccount');
+  sessionStorage.removeItem('xummSignedIn');
+
+  // Remove any XUMM SDK cached keys
+  try{
+    for(let i = localStorage.length - 1; i >= 0; i--){
+      const k = localStorage.key(i);
+      if(k && /^xumm/i.test(k)){
+        localStorage.removeItem(k);
+      }
+    }
+
+    for(let i = sessionStorage.length - 1; i >= 0; i--){
+      const k = sessionStorage.key(i);
+      if(k && /^xumm/i.test(k)){
+        sessionStorage.removeItem(k);
+      }
+    }
+  }catch(e){}
+
+  // Reset globals
+  if(typeof window.connectedAccount !== 'undefined'){
+    window.connectedAccount = null;
+  }
+
+  // Reset balances
+  const xrpEl = document.getElementById('xrp-bal');
+  const cfcEl = document.getElementById('cfc-bal');
+
+  if(xrpEl) xrpEl.textContent = '--';
+  if(cfcEl) cfcEl.textContent = '--';
+
+  updateWalletUI();
+
+  const orders = document.getElementById('my-orders');
+  if(orders) orders.style.display = 'none';
+
+  // Rebind connect button cleanly
+  const btn = document.querySelector('#banner-disconnected button');
+
+  if(btn && btn.parentNode){
+    const clone = btn.cloneNode(true);
+    clone.onclick = xamanConnect;
+    clone.disabled = false;
+    clone.textContent = 'Connect Wallet';
+    btn.parentNode.replaceChild(clone, btn);
+  }
+}
+
+function setConnected(acc){
+  if(!acc) return;
+  if(connectedWallet && connectedWallet === acc) return;
+
+  connectedWallet = acc;
+  localStorage.setItem('cfcWallet', acc);
+  localStorage.setItem('xrpl_account', acc);
+
+  updateWalletUI();
+  fetchBalances(acc);
+  loadOrders();
+}
+function updateWalletUI(){
+  const connected = document.getElementById('banner-connected');
+  const disconnected = document.getElementById('banner-disconnected');
+  const addrText = document.getElementById('wallet-addr-text');
+  if(connectedWallet){
+    const short = connectedWallet.slice(0,8)+'...'+connectedWallet.slice(-4);
+    addrText.textContent = 'Connected: '+short;
+    connected.style.display = 'flex';
+    disconnected.style.display = 'none';
+  } else {
+    connected.style.display = 'none';
+    disconnected.style.display = 'flex';
+    document.getElementById('my-orders').style.display = 'none';
+  }
+}
+
+async function fetchBalances(wallet){
+  try {
+    const ws = new WebSocket('wss://s1.ripple.com');
+    ws.onopen = () => {
+      ws.send(JSON.stringify({command:'account_info',account:wallet,ledger_index:'current'}));
+    };
+    ws.onmessage = (ev) => {
+      const d = JSON.parse(ev.data);
+      if(d.result?.account_data){
+        const xrp = (parseInt(d.result.account_data.Balance)/1000000).toFixed(2);
+        document.getElementById('xrp-bal').textContent = xrp;
+        // Now fetch CFC balance
+        ws.send(JSON.stringify({command:'account_lines',account:wallet,ledger_index:'current',peer:CFC_ISSUER}));
+      } else if(d.result?.lines !== undefined){
+        const cfcLine = d.result.lines.find(l=>l.account===CFC_ISSUER && l.currency==='CFC');
+        if(cfcLine){ document.getElementById('cfc-bal').textContent = parseFloat(cfcLine.balance).toFixed(0); }
+        ws.close();
+      }
+    };
+    ws.onerror = () => ws.close();
+  } catch(e){ console.warn('Balance fetch failed',e); }
+}
+
+// ── FAUCET ──
+async function claimFaucet(){
+  if(!connectedWallet){ openWalletModal(); return; }
+  const btn = document.querySelector('.btn-faucet');
+  const msg = document.getElementById('faucet-msg');
+  btn.disabled = true; btn.textContent = 'Claiming...';
+  msg.textContent = ''; msg.className = '';
+  try {
+    const r = await fetch('https://cfc-nft-shared-mint-backend.onrender.com/api/faucet-claim', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({wallet: connectedWallet})
+    });
+    const d = await r.json();
+    if(r.ok && (d.success || d.ok)){
+      msg.textContent = '25 CFC sent to your wallet! Check back in 24 hours';
+      msg.style.color = 'var(--green)';
+      setTimeout(()=>fetchBalances(connectedWallet), 3000);
+    } else {
+      msg.textContent = d.error || 'Unable to claim. You may have already claimed today or need a CFC trustline.';
+      msg.style.color = 'var(--gold)';
+    }
+  } catch(e){
+    msg.textContent = 'Network error. Please try again.';
+    msg.style.color = '#F87171';
+  }
+  btn.disabled = false; btn.textContent = 'Claim Now →';
+}
+
+// ── NFT LOADING ──
+let allNFTs = [];
+let activeCategory = 'all';
+
+function getCategoryEmoji(cat){
+  const map = {book:'&#128214;',article:'&#128196;',workshop:'&#129504;',service:'&#9881;',art:'&#127912;'};
+  return map[cat?.toLowerCase()] || '&#128305;';
+}
+
+function getCategoryBadgeClass(cat){
+  const map = {book:'badge-book',article:'badge-article',workshop:'badge-workshop',service:'badge-service',art:'badge-art'};
+  return map[cat?.toLowerCase()] || 'badge-book';
+}
+
+function renderNFTCard(nft){
+  const imgUrl = nft.image_cid ? IPFS_GATEWAY+nft.image_cid : '';
+  const available = nft.quantity ?? 0;
+  const cat = nft.category || 'art';
+  const soldOut = available <= 0;
+ return `<div class="nft-card reveal" data-cat="${cat.toLowerCase()}" data-id="${nft.id}">
+  <div class="nft-img-wrap">
+    ${imgUrl ? `<img class="nft-img" src="${imgUrl}" alt="${nft.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="nft-img-placeholder" style="display:none">${getCategoryEmoji(cat)}</div>` : `<div class="nft-img-placeholder">${getCategoryEmoji(cat)}</div>`}
+    <div class="nft-badge ${getCategoryBadgeClass(cat)}">${getCategoryEmoji(cat)} ${cat.charAt(0).toUpperCase()+cat.slice(1)}</div>
+    ${soldOut ? '<div class="sold-out-badge">Sold Out</div>' : ''}
+  </div>
+  <div class="nft-body">
+    <div class="nft-title">${nft.name || 'Untitled NFT'}</div>
+    <div class="nft-desc">${nft.description || 'No description available.'}</div>
+    <div class="nft-qty">${available} available${nft.sold_count ? ' &middot; '+nft.sold_count+' sold' : ''}</div>
+    <div class="nft-footer">
+      <div class="nft-prices">
+        ${nft.price_xrp ? `<div class="nft-price-xrp">${nft.price_xrp} XRP</div>` : ''}
+        ${nft.price_rlusd ? `<div class="nft-price-rlusd">${nft.price_rlusd} RLUSD</div>` : ''}
+      </div>
+      <div class="nft-buy-btns">
+        ${soldOut ? '<span style="color:var(--text-dim);font-size:0.75rem;">Sold Out</span>' : `
+          ${nft.price_xrp ? `<button class="btn-buy-xrp" onclick="initBuy(${nft.id},'XRP')" title="Buy with XRP">XRP</button>` : ''}
+          ${nft.price_rlusd ? `<button class="btn-buy-rlusd" onclick="initBuy(${nft.id},'RLUSD')" title="Buy with RLUSD">RLUSD</button>` : ''}
+        `}
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+async function loadNFTs(){
+  const grid = document.getElementById('nft-grid');
+  try {
+    const r = await fetch(MARKET_API+'/api/market/all');
+    if(!r.ok) throw new Error('API error');
+    allNFTs = await r.json();
+    // Update stat
+    const listed = allNFTs.filter(n=>!n.is_delisted && (n.quantity > 0)).length;
+    document.getElementById('stat-nfts').textContent = allNFTs.length;
+    renderFilteredNFTs();
+  } catch(e){
+    grid.innerHTML = `<div class="empty-state">
+  <div class="empty-icon">&#127759;</div>
+  <div class="empty-title">Marketplace Loading</div>
+  <div class="empty-sub">Unable to load listings right now. Please refresh the page.</div>
+</div>`;
+  }
+}
+
+function renderFilteredNFTs(){
+  const grid = document.getElementById('nft-grid');
+  const normCat = c => c.toLowerCase().replace(/s$/, '');
+  const filtered = activeCategory === 'all' ? allNFTs : allNFTs.filter(n => normCat(n.category||'art') === normCat(activeCategory));
+  if(!filtered.length){
+  grid.innerHTML = `<div class="empty-state"><div class="empty-icon">&#127912;</div><div class="empty-title">No NFTs in this category</div><div class="empty-sub">Check back soon or browse all categories.</div></div>`; 
+    return;
+  }
+  grid.innerHTML = filtered.map(renderNFTCard).join('');
+  // Re-observe for reveal animation
+  grid.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+}
+
+// Filter tabs
+document.querySelectorAll('.filter-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    activeCategory = tab.dataset.cat;
+    renderFilteredNFTs();
+  });
+});
+
+// ── BUY FLOW ──
+let buyNFT = null;
+let buyCurrency = 'XRP';
+let xamanPollTimer = null;
+
+function initBuy(nftId, currency){
+  if(!connectedWallet){ openWalletModal(); return; }
+  buyNFT = allNFTs.find(n=>n.id===nftId);
+  if(!buyNFT) return;
+  buyCurrency = currency || (buyNFT.price_xrp ? 'XRP' : 'RLUSD');
+  showBuyStep1();
+  openModal('buy-modal');
+}
+
+function showBuyStep1(){
+  if(!buyNFT) return;
+  const imgUrl = buyNFT.image_cid ? IPFS_GATEWAY+buyNFT.image_cid : '';
+  const xrpPrice = buyNFT.price_xrp ? buyNFT.price_xrp+' XRP' : null;
+  const rlusdPrice = buyNFT.price_rlusd ? buyNFT.price_rlusd+' RLUSD' : null;
+  const currentPrice = buyCurrency === 'XRP' ? xrpPrice : rlusdPrice;
+  document.getElementById('buy-modal-content').innerHTML = `
+    <div class="modal-title">Purchase NFT</div>
+   ${imgUrl ? `<img src="${imgUrl}" class="buy-nft-img" alt="${buyNFT.name}" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div style="height:140px;background:var(--bg4);border-radius:10px;margin-bottom:1rem;display:flex;align-items:center;justify-content:center;font-size:3rem;">${getCategoryEmoji(buyNFT.category)}</div>`}
+    <div class="buy-nft-name">${buyNFT.name}</div>
+    <div class="buy-nft-meta">${buyNFT.description?.substring(0,100) || ''}${buyNFT.description?.length > 100 ? '...' : ''}</div>
+    <hr class="divider" />
+    ${(xrpPrice && rlusdPrice) ? `<div class="currency-toggle">
+      <button class="cur-btn xrp ${buyCurrency==='XRP'?'active':''}" onclick="setBuyCurrency('XRP')">XRP</button>
+      <button class="cur-btn rlusd ${buyCurrency==='RLUSD'?'active':''}" onclick="setBuyCurrency('RLUSD')">RLUSD</button>
+    </div>` : ''}
+    <div class="price-row">
+      <span class="price-label">Purchase Price</span>
+      <span class="price-val" id="buy-price-display">${currentPrice || 'N/A'}</span>
+    </div>
+    <div class="price-row" style="margin-bottom:1.5rem;">
+      <span class="price-label">Buying as</span>
+      <span style="font-size:0.82rem;color:var(--text-muted);">${connectedWallet.slice(0,10)}...${connectedWallet.slice(-4)}</span>
+    </div>
+    <div class="alert alert-warning" style="font-size:0.78rem;margin-bottom:1.5rem;">You will be redirected to sign in XAMAN. Keep your XAMAN app ready.</div>
+    <div id="buy-error" class="alert alert-error" style="display:none;"></div>
+    <button class="btn-full-gold" id="confirm-buy-btn" onclick="confirmBuy()">
+      Confirm Purchase with ${buyCurrency} &rarr;
+    </button>
+    <button class="btn-full-outline" onclick="closeModal('buy-modal')">Cancel</button>
+  `;
+}
+
+function setBuyCurrency(cur){
+  buyCurrency = cur;
+  showBuyStep1();
+}
+
+async function confirmBuy(){
+  if(!buyNFT || !connectedWallet) return;
+  const btn = document.getElementById('confirm-buy-btn');
+  const errEl = document.getElementById('buy-error');
+  btn.disabled = true; btn.textContent = 'Creating payment request...';
+  errEl.style.display = 'none';
+  try {
+    const endpoint = buyCurrency === 'XRP' ? '/api/market/pay-xrp' : '/api/market/pay-rlusd';
+   const r = await fetch(MARKET_API+endpoint, {
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+ body: JSON.stringify({
+  id: buyNFT.id,
+  sell_offer_index: buyNFT.sell_offer_index
+})
+});
+    const d = await r.json();
+    if(!r.ok || (!d.uuid && !d.link)) throw new Error(d.error || 'Payment request failed');
+    showXamanStep(d);
+  } catch(e){
+    errEl.textContent = e.message || 'Failed to create payment. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Try Again';
+  }
+}
+
+function showXamanStep(payload){
+  const link = payload.link || payload.next?.always || '#';
+  const uuid = payload.uuid;
+  document.getElementById('buy-modal-content').innerHTML = `
+    <div class="modal-title">Sign in XAMAN</div>
+    <p class="modal-sub">Scan the QR code with XAMAN or tap the button below to open XAMAN and sign your transaction.</p>
+    <div class="xaman-section">
+      <canvas id="qr-canvas"></canvas>
+      <br />
+      <a href="${link}" target="_blank" class="xaman-link-btn">Open in XAMAN App &rarr;</a>
+    </div>
+    <hr class="divider" />
+    <div class="spinner"></div>
+    <div class="status-text" id="xaman-status">Waiting for your signature in XAMAN...</div>
+    <button class="btn-full-outline" style="margin-top:1rem;" onclick="closeModal('buy-modal')">Cancel</button>
+  `;
+  // Generate QR
+  setTimeout(()=>{
+    const qrCanvas = document.getElementById('qr-canvas');
+    if(qrCanvas && typeof QRCode !== 'undefined'){
+      QRCode.toCanvas(qrCanvas, link, {width:180,color:{dark:'#F0B429',light:'#12121F'}}, (err)=>{
+        if(err) console.warn('QR err',err);
+      });
+    }
+  }, 100);
+  // Poll for completion
+  if(xamanPollTimer) clearInterval(xamanPollTimer);
+  let pollCount = 0;
+  xamanPollTimer = setInterval(async()=>{
+    pollCount++;
+    if(pollCount > 60){ clearInterval(xamanPollTimer); return; } // 5 min timeout
+    try {
+      const pr = await fetch(MARKET_API+'/api/xaman/poll/'+uuid).catch(()=>null);
+      if(pr && pr.ok){
+        const pd = await pr.json();
+        if(pd.signed){
+          clearInterval(xamanPollTimer);
+          closeModal('buy-modal');
+          openModal('success-modal');
+          setTimeout(()=>loadOrders(), 3000);
+          return;
+        }
+      }
+    } catch(e){ /* keep polling */ }
+  }, 5000);
+}
+
+// ── ORDERS ──
+  async function loadOrders(){
+    console.log('LOAD ORDERS RUNNING');
+ const wallet =
+  connectedWallet ||
+  window.connectedAccount ||
+  localStorage.getItem('cfcWallet') ||
+  localStorage.getItem('xummAccount') ||
+  sessionStorage.getItem('connectedAccount');
+if(!wallet) return;
+  const grid = document.getElementById('orders-grid');
+  grid.innerHTML = '<div class="nft-loading"><div class="nft-loading-spinner"></div><div>Loading your library...</div></div>';
+  try {
+    const r = await fetch(MARKET_API+'/api/orders/by-wallet/'+wallet);
+    if(!r.ok) throw new Error('Failed');
+    const orders = await r.json();
+    if(!orders.length){
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">&#128196;</div><div class="empty-title">No NFTs yet</div><div class="empty-sub">Purchase an NFT from the marketplace above to start your library.</div></div>`;
+      return;
+    }
+   grid.innerHTML = orders.map(o=>`
+  <div class="order-card">
+<img
+  src="${o.image_url || o.marketplace_nft?.image_url || (o.image_cid ? IPFS_GATEWAY + o.image_cid : '') || (o.marketplace_nft?.image_cid ? IPFS_GATEWAY + o.marketplace_nft.image_cid : '')}"
+  class="buy-nft-img"
+  loading="lazy"
+  decoding="async"
+  onerror="this.style.display='none'"
+/>
+<div class="order-name">
+  ${o.name || 'NFT #' + o.marketplace_nft_id}
+</div>
+   
+    <div class="order-meta">
+      Status: PAID
+    </div>
+
+    <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+
+           ${
+        o.reward_claimed
+        ? `<span class="order-badge badge-completed">Reward Claimed</span>`
+        : `
+<button class="btn-full-gold"
+  onclick="claimCfcReward(${o.submission_id}, this)">
+  Claim Your Bonus CFC Rewards
+</button>
+
+<span class="status ok" style="display:none; margin-left:8px;">
+  100 CFC Tokens successfully claimed
+</span>
+`
+      }
+
+      <button class="btn-full-outline"
+  onclick="openReader('${o.metadata_cid}', ${o.submission_id})">
+  Open Content
+</button>
+
+    </div>
+
+  </div>
+`).join('');
+    } catch(e){
+  grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+    <div class="empty-icon">&#128196;</div>
+    <div class="empty-title">Library unavailable</div>
+    <div class="empty-sub">Unable to load your orders. Please refresh.</div>
+  </div>`;
+}
+}
+
+// ── MODAL HELPERS ──
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',(e)=>{ if(e.target===m) closeModal(m.id); });
+});
+
+// ── INIT ──
+  function openReader(metadataCid, submissionId){
+
+  const wallet =
+    connectedWallet ||
+    window.connectedAccount ||
+    localStorage.getItem('cfcWallet') ||
+    localStorage.getItem('xummAccount') ||
+    sessionStorage.getItem('connectedAccount');
+
+  if (!wallet){
+    alert("Connect your wallet first.");
+    return;
+  }
+
+  const url =
+     "reader.html" +
+    "?metadata_cid=" + encodeURIComponent(metadataCid) +
+    "&submission_id=" + encodeURIComponent(submissionId) +
+    "&wallet=" + encodeURIComponent(wallet);
+
+  window.open(url, "_blank");
+}
+loadWallet();
+  async function claimCfcReward(submissionId, btn) {
+
+  const msg = btn?.nextElementSibling;
+
+  if (msg) {
+    msg.style.display = "inline-block";
+
+    clearTimeout(msg._hideTimer);
+
+    msg._hideTimer = setTimeout(() => {
+      msg.style.display = "none";
+    }, 5000);
+  }
+
+  try {
+
+    btn.disabled = true;
+
+    const wallet =
+      connectedWallet ||
+      window.connectedAccount ||
+      localStorage.getItem('cfcWallet') ||
+      localStorage.getItem('xummAccount') ||
+      sessionStorage.getItem('connectedAccount');
+
+    if (!wallet) {
+      toast("Please connect wallet first");
+      return;
+    }
+
+    const res = await fetch("https://cfc-faucet-backend.onrender.com/api/reward-claim", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        wallet,
+        submissionId: submissionId
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.link) {
+      window.open(data.link, "_blank");
+      return;
+    }
+
+    if (data.success) {
+
+      btn.style.display = "none";
+
+      if (btn.nextElementSibling) {
+        btn.nextElementSibling.style.display = "inline";
+      }
+
+      toast("100 CFC sent!");
+
+    } else {
+
+      toast("Reward failed");
+
+    }
+
+  } catch (err) {
+
+    console.error(err);
+    toast("Error claiming reward");
+
+  }
+}
+loadNFTs();
+</script>
+<script>
+  const links = document.querySelectorAll(".nav-links a");
+  const current = window.location.pathname.split("/").pop();
+
+  links.forEach(link => {
+    if (link.getAttribute("href") === current) {
+      link.classList.add("active");
+    }
+  });
+
+function switchView(view) {
+  // tabs
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  const tabMap = {'listings': 0, 'my-orders': 1, 'redeem': 2};
+  document.querySelectorAll('.view-tab')[tabMap[view]]?.classList.add('active');
+
+  // sections
+  document.getElementById('listings').style.display = view === 'listings' ? '' : 'none';
+  document.getElementById('my-orders').style.display = view === 'my-orders' ? 'block' : 'none';
+  document.getElementById('redeem-view').style.display = view === 'redeem' ? '' : 'none';
+
+  // 🔥 THIS IS THE MISSING PART (INDEX DOES THIS)
+  if (view === 'my-orders') {
+    setTimeout(() => {
+      loadOrders();
+    }, 50);
+  }
+  }
+
+  window.switchView = switchView;
+
+document.addEventListener('DOMContentLoaded', function(){
+  const myBtn = Array.from(document.querySelectorAll('.view-tab'))
+    .find(btn => btn.textContent.trim().toLowerCase() === 'my purchases');
+
+  if (myBtn && !myBtn.__bound){
+    myBtn.__bound = true;
+    myBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      console.log('MY PURCHASES CLICKED');
+      switchView('my-orders');
+    });
+  }
+});
+function loadRedeem() {
+  const el = document.getElementById('redeem-list');
+  if (!connectedWallet) {
+    el.innerHTML = '<div style="color:#8B90A0;padding:3rem;">Connect your wallet to see redeemable NFTs.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="color:#87CEEB;padding:2rem;">Loading your NFTs...</div>';
+  fetch(MARKET_API + '/api/orders/by-wallet/' + connectedWallet)
+    .then(r => r.json())
+    .then(orders => {
+      if (!orders.length) {
+        el.innerHTML = '<div style="color:#8B90A0;padding:2rem;">No NFTs to redeem yet. Purchase from the Marketplace!</div>';
+        return;
+      }
+      el.innerHTML = orders.map(o => `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
+          <div style="text-align:left;">
+            <div style="font-weight:600;color:#E5E7EB;margin-bottom:0.25rem;">${o.name || 'NFT #'+o.marketplace_nft_id}</div>
+            <div style="font-size:0.8rem;color:#87CEEB;">Purchased for ${o.price} ${o.currency}</div>
+          </div>
+          <div>
+            ${o.reward_claimed
+              ? '<span style="color:#34D399;font-size:0.8rem;font-weight:600;">&#10003; Reward Claimed</span>'
+              : `<button class="btn-full-gold" style="padding:0.5rem 1.2rem;font-size:0.85rem;" onclick="redeemOrder(${o.id})">Redeem</button>`
+            }
+          </div>
+        </div>`).join('');
+    })
+    .catch(() => { el.innerHTML = '<div style="color:#F87171;">Error loading NFTs.</div>'; });
+}
+
+async function redeemOrder(orderId) {
+  if (!connectedWallet) { alert('Connect your wallet first.'); return; }
+  try {
+    const r = await fetch(MARKET_API + '/api/orders/redeem', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ order_id: orderId, wallet: connectedWallet })
+    });
+    const d = await r.json();
+    if (d.success) { alert('Redeemed! Check your content in the Reader.'); loadRedeem(); }
+    else alert(d.error || 'Redeem failed.');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+</script>
+</body>
+</html>
